@@ -2,50 +2,51 @@ var express = require('express');
 var cors = require('cors');
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
-const CLIENT_ID = 'cfec03bb8f9b3ff03b1a';
-const CLIENT_SECRET = '57078a77aad3998fe88661891b947a8d2fa3af82';
+const { MongoClient } = require('mongodb');
+let con = new MongoClient('mongodb://0.0.0.0:27017');
+const generateToken = require('./tocken');
 
 var app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/getAccessToken', async function (req, resp) {
-  console.log(req.query.code);
-  const params =
-    '?client_id=' +
-    CLIENT_ID +
-    '&client_secret=' +
-    CLIENT_SECRET +
-    '&code=' +
-    req.query.code;
-  await fetch('https://github.com/login/oauth/access_token' + params, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-    },
-  })
-    .then((response) => {
-      return response.json();
-    })
-    .then((result) => {
-      // console.log(result);
-      resp.json(result);
-    });
+app.post('/user', async (req, resp) => {
+  try {
+    let dbConnect = await con.connect();
+    let db = await dbConnect.db('repo');
+    let table = await db.collection('users');
+    let findData = await table.find({ email: req.body.email }).toArray();
+    if (findData.length) {
+      resp.status(200).json({ message: 'User already Exist' });
+    } else {
+      let insertData = await table.insertOne(req.body);
+      resp.status(200).json({ message: 'inserted', data: insertData });
+    }
+  } catch (error) {
+    resp.status(400).json({ message: 'error', error });
+  }
 });
 
-app.get('/getUserData', async function (req, resp) {
-  await fetch('https://api.github.com/user', {
-    method: 'GET',
-    headers: {
-      Authorization: req.get('Authorization'), //Bearer access token
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      // console.log(data);
-      resp.json(data);
-    });
+app.post('/login', async (req, resp) => {
+  try {
+    let dbConnect = await con.connect();
+    let db = await dbConnect.db('repo');
+    let table = await db.collection('users');
+    findData = await table.find({ email: req.body.email }).toArray();
+    if (findData.length) {
+      if (findData[0].password === req.body.password) {
+        let token = await generateToken(findData[0]._id, findData[0].email);
+        console.log(token);
+        resp.status(200).json({ message: 'Login Successful', token, findData });
+      } else {
+        resp.status(200).json({ message: 'Incorrect password' });
+      }
+    } else {
+      resp.status(200).json({ message: 'Incorrect email' });
+    }
+  } catch (error) {
+    resp.status(400).json({ message: 'error' });
+  }
 });
 
 app.get('/getRepos', async function (req, resp) {
