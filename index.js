@@ -3,7 +3,9 @@ var cors = require('cors');
 const fetch = (...args) =>
   import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const { MongoClient } = require('mongodb');
-let con = new MongoClient('mongodb://0.0.0.0:27017');
+let con = new MongoClient(
+  'mongodb+srv://root:root@cluster0.dzjjnon.mongodb.net/'
+);
 const generateToken = require('./tocken');
 
 var app = express();
