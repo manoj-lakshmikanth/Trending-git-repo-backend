@@ -10,6 +10,10 @@ var app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/check', (req, resp) => {
+  resp.send('working fine');
+});
+
 app.post('/user', async (req, resp) => {
   try {
     let dbConnect = await con.connect();
